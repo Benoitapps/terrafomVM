@@ -84,19 +84,64 @@ data "azurerm_public_ip" "public_ip" {
   resource_group_name = azurerm_linux_virtual_machine.virtual_machine.resource_group_name
 }
 
-
-
 resource "null_resource" "install_figlet" {
+  connection {
+    type     = "ssh"
+    user     = var.admin_username
+    host     = data.azurerm_public_ip.public_ip.ip_address
+    password = var.admin_password
+    port     = 22
+  }
+
+  provisioner "file" {
+    source      = ".env.frontend"
+    destination = "/tmp/.env.frontend"
+  }
+
   provisioner "remote-exec" {
-    connection {
-      type     = "ssh"
-      user     = var.admin_username
-      host     = data.azurerm_public_ip.public_ip.ip_address
-      password = var.admin_password
-      port     = 22
-    }
     inline = [
-      "mkdir test",
+      "rm -rf frontend",
+      "mkdir frontend",
+      "mv /tmp/.env.frontend ./frontend/.env",
+      "echo 'VITE_URL_BACK=http://${data.azurerm_public_ip.public_ip.ip_address}:3000' > ./frontend/.env",
+      "echo 'VITE_DOMAIN_NAME_BACK=${data.azurerm_public_ip.public_ip.ip_address}' >> ./frontend/.env",
+      "echo 'VITE_PORT_BACK=3000' >> ./frontend/.env"
+    ]
+  }
+
+  provisioner "file" {
+    source      = ".env.backend"
+    destination = "/tmp/.env.backend"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "rm -rf backend",
+      "mkdir backend",
+      "mv /tmp/.env.backend ./backend/.env",
+      # "mv /tmp/backend/.env ./backend/.env",
+      "echo 'HOSTNAME_BACK=${data.azurerm_public_ip.public_ip.ip_address}' > ./backend/.env",
+      "echo 'URL=http://${data.azurerm_public_ip.public_ip.ip_address}' >> ./backend/.env",
+      "echo 'DB_NAME=app' >> ./backend/.env",
+      "echo 'DB_USER=root' >> ./backend/.env",
+      "echo 'DB_PASSWORD=password' >> ./backend/.env",
+      "echo 'PORT_BACK=3000' >> ./backend/.env",
+      "echo 'PORT_FRONT=5173' >> ./backend/.env",
+      "echo 'TOKEN_SECRET=default' >> ./backend/.env",
+      "echo 'URL_FRONT=http://${data.azurerm_public_ip.public_ip.ip_address}:5173' >> ./backend/.env"
+    ]
+    
+  }
+
+  provisioner "file" {
+    source      = "script.sh"
+    destination = "/tmp/script.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/script.sh",
+      "/tmp/script.sh"
     ]
   }
 
