@@ -84,7 +84,7 @@ data "azurerm_public_ip" "public_ip" {
   resource_group_name = azurerm_linux_virtual_machine.virtual_machine.resource_group_name
 }
 
-resource "null_resource" "install_figlet" {
+resource "null_resource" "install_project" {
   connection {
     type     = "ssh"
     user     = var.admin_username
